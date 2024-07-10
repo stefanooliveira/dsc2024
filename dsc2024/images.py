@@ -15,7 +15,7 @@ def generate_pil_crop_mask(mask_points: List[Tuple[int, int]]) -> PILCropMask:
     y = [y for _, y in mask_points]
     return (min(x), min(y), max(x), max(y))
 
-
+#TODO remake this entire function in cropper file
 def read_image_from_response_and_cropit(
     response: requests.Response,
     mask: PILCropMask
@@ -27,6 +27,6 @@ def read_image_from_response_and_cropit(
 
 
 def download_image_and_cropit(url: str) -> PIL_Image.Image:
-    mask = generate_pil_crop_mask(get_image_mask_points())
+    mask = generate_pil_crop_mask(get_image_mask_points()) #TODO Make in cropper 
     response = requests.get(url)
     return read_image_from_response_and_cropit(response, mask)
