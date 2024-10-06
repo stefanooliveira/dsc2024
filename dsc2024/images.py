@@ -17,22 +17,12 @@ def generate_pil_crop_mask(mask_points: List[Tuple[int, int]]) -> PILCropMask:
     y = [y for _, y in mask_points]
     return (min(x), min(y), max(x), max(y))
 
-#TODO remake this entire function in cropper file
-# def read_image_from_response_and_cropit(
-#     response: requests.Response,
-#     mask: PILCropMask
-# ) -> PIL_Image.Image:
-#     """Read from a successful response and generate a image cropped"""
-#     img = PIL_Image.open(BytesIO(response.content))
-#     img_cropped = img.crop(mask)
-#     return img_cropped
-
 
 def download_image_and_cropit(url: str, icao_code: str, range: int) -> PIL_Image.Image:
     full_sat_image = cropper.download_sat_image(url)
     return cropper.crop_airport_area(full_sat_image, icao_code, range)
-
-
+    
+        
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import requests
@@ -40,10 +30,10 @@ if __name__ == '__main__':
     from io import BytesIO
     
     test_icao = "SBSJ"
-    test_range = 500
+    test_range = 2000
 
     cropper_image = download_image_and_cropit("http://satelite.cptec.inpe.br/repositoriogoes/goes16/goes16_web/ams_ret_ch11_baixa/2022/06/S11635384_202206010100.jpg",
-                              test_icao, test_range)
+                            icao_code=test_icao, range=test_range)
     
 
             
@@ -64,7 +54,7 @@ if __name__ == '__main__':
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
 
-    # Second plot
+    #Second plot
     plt.subplot(1, 2, 1)
     plt.imshow(cropper_image)
     latitude = round(cropper.get_airport_location_by_icao(test_icao)[0],4)

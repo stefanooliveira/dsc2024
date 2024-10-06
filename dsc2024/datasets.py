@@ -15,9 +15,12 @@ _datasets_dir = os.environ.get(
 )
 datasets_dir = Path(_datasets_dir)
 dataset_default = "public.csv"
+vector_images_filepath = "images_cropped_full_samples_2000km.pkl.xz"
 
 # ref: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
 pandas.options.mode.copy_on_write = True
+
+
 
 
 @lru_cache
@@ -30,12 +33,9 @@ def get_public_dataset(
     set_flightid_as_index: bool = True
 ) -> pandas.DataFrame:
     df = pandas.read_csv(datasets_dir / dataset_default)
-
-    if n := os.environ.get("DSC2024_SAMPLING"):
-        sampling = int(n)
-
-    if sampling:
-        df = df.sample(n=sampling)
+    #df = df.sample(n=30000, random_state=42)
+    print(f"Dataset {dataset_default} has shape {df.shape} with images imported from {vector_images_filepath} and converted to vectors")
+    
     if parse_hora_ref:
         df.hora_ref = handling.parse_hora_ref_as_series(df.hora_ref)
     if add_anac_extra_info:
@@ -85,13 +85,14 @@ def get_test_dataset(sampling: Optional[int] = None,
 
 
 def save_image_embedding(df: pandas.DataFrame):
-    image_embedding_path = datasets_dir / "images.pkl.xz"
+    image_embedding_path = datasets_dir / "images_cropped_full_samples_2000km.pkl.xz"
     df.to_pickle(image_embedding_path)
     print(f"Saved pickle at {image_embedding_path}")
 
 
 def get_image_embedding() -> pandas.DataFrame:
-    image_embedding_path = datasets_dir / "images.pkl.xz"
+    image_embedding_path = datasets_dir / vector_images_filepath
+    print(f"Reading from {image_embedding_path}")
     return pandas.read_pickle(image_embedding_path)
 
 
@@ -136,3 +137,7 @@ def get_anac_aerodromos_publicos() -> pandas.DataFrame:
     df.drop("designacao", axis=1, inplace=True)
     df.set_index("id", inplace=True)
     return df
+
+
+if __name__ == '__main__':
+    get_public_dataset()

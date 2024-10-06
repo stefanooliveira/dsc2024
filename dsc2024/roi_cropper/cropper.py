@@ -2,11 +2,31 @@
 import sys
 import requests
 import cv2
+import time
 import numpy as np
 from PIL import Image
 from typing import Tuple, List
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 from . import get_icao_locations
+
+# Retry strategy
+retry_strategy = Retry(
+    total=5,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]  # Updated argument name
+)
+
+# Adapter with the retry strategy
+adapter = HTTPAdapter(max_retries=retry_strategy)
+
+# Use a session
+session = requests.Session()
+session.mount("https://", adapter)
+session.mount("http://", adapter)
 
 
 PILCropMask = Tuple[int, int, int, int]
@@ -19,21 +39,21 @@ MAP_LAT_MIN, MAP_LAT_MAX = -56, 35
 MAP_LON_MIN, MAP_LON_MAX = -116, -25
 
 
-def download_sat_image(url: str):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raises an HTTPError for bad responses
-        image_bytes = response.content
-        image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
-        if image is None:
-            raise ValueError("Image could not be decoded.")
-        return image
-    except requests.RequestException as e:
-        print(f"Error downloading image: {e}")
-        sys.exit(1)
-    except ValueError as e:
-        print(f"Error decoding image: {e}")
-        sys.exit(1)
+def download_sat_image(url: str, timeout=120):
+    while True:
+        try:
+            response = session.get(url, timeout=timeout)
+            response.raise_for_status()  # Raises an HTTPError for bad responses
+            image_bytes = response.content
+            image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+            if image is None:
+                raise ValueError("Image could not be decoded.")
+            return image
+        except requests.RequestException as e:
+            print(f"Error downloading image: {e} with url: {url}")
+        except ValueError as e:
+            print(f"Error decoding image: {e} with url: {url}")
+        time.sleep(10)
 
 
 def crop_airport_area(full_image: cv2.typing.MatLike, icao_code: str, range_km):
@@ -46,9 +66,6 @@ def crop_airport_area(full_image: cv2.typing.MatLike, icao_code: str, range_km):
     
     # Convert numpy array to PIL Image
     roi = Image.fromarray(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB))  # Ensure correct color conversion
-    
-    # HACK            
-    test_image_type(roi, "cropper crop_airport_area")
     
     return roi
 
@@ -147,9 +164,3 @@ if __name__ == '__main__':
     full_sat_image = download_sat_image("http://satelite.cptec.inpe.br/repositoriogoes/goes16/goes16_web/ams_ret_ch11_baixa/2022/06/S11635384_202206010100.jpg")
     crop_airport_area(full_sat_image, codigo_aeroporto, int(range_km2))
 
-# TODO Update cropper with v2 [OK]
-# TODO Update to open icao_locations.json only once [OK]
-# TODO Change images.py [OK]
-# TODO Compare feature importance
-# TODO Read paper
-# TODO Make comparison
